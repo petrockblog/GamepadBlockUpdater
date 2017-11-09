@@ -1,37 +1,72 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter.filedialog import askopenfilename
 import serial
 import time
 import sys
 import glob
 import re
 from subprocess import call
+import requests
+from requests import get  # to make GET request
 
 class Application(tk.Frame):
     def __init__(self, master=None):
-        super().__init__(master)
+        tk.Frame.__init__(self, master)
+        master.title("GamepadBlock Updater")
 
-        self.step_2_cbox = None
         self.serialPort = tk.StringVar()
         self.extractedVersion = ""
-        self.firmwareFile = ""
+        self.title = ttk.Label(self, text="GamepadBlock Firmware Updater")
+        self.title.grid(row=0, column=0, columnspan=2, pady=5, padx=5)
+
+        self.recentFirmwareVersion = ttk.Label(self, text="")
+        self.recentFirmwareVersion.grid(row=1, column=0, pady=5, padx=5)
+
+        self.step_1_label = ttk.Label(self, text="Step 1: Connect the GamepadBlock to your PC")
+        self.step_1_label.grid(row=2, column=0, columnspan=2, sticky='W', pady=5, padx=5)
+
+        self.step_3_label = ttk.Label(self, text="Step 3: Select the COM port of the GamepadBlock")
+        self.step_3_label.grid(row=4, column=0, sticky="W", pady=5, padx=5)
+
+        self.step_3_cbox = ttk.Combobox(self, textvariable=self.serialPort, value=self.serial_ports())
+        self.step_3_cbox.grid(row=4, column=1, pady=5, padx=5)
+        self.step_3_cbox.bind("<<ComboboxSelected>>", self.readVersion)
+
+        self.step_2_label = ttk.Label(self, text="Step 2: Refresh the list of COM ports").grid(row=3, column=0, sticky="W", pady=5, padx=5)
+        self.step_2_button = ttk.Button(self, text="Refresh", command=self.refreshSerialPorts).grid(row=3, column=1, pady=5, padx=5)
+
+        self.versionLabel = ttk.Label(self, text="")
+        self.versionLabel.grid(row=5, column=0, sticky="W", pady=5, padx=5)
+
+        self.step_4_label = ttk.Label(self, text="Step 4: Press the Reset button on the GamepadBlock").grid(row=6, column=0, columnspan=2, sticky="W", pady=5, padx=5)
+        self.step_5_label = ttk.Label(self, text="Step 5: Download the new firmware to the GamepadBlock").grid(row=7, column=0, sticky="W", pady=5, padx=5)
+        self.step_5_button = ttk.Button(self, text="Start Download", command=self.downloadFirmware).grid(row=7, column=1, pady=5, padx=5)
         self.pack()
-        self.create_widgets(self.serialPort)
 
-    def create_widgets(self, serialPort):
-        self.title = ttk.Label(self, text="GamepadBlock Firmware Updater").grid(row=0, column=0, columnspan=2, pady=5, padx=5)
-        self.step_1_label = ttk.Label(self, text="Step 1: Connect the GamepadBlock to your PC").grid(row=1, column=0, columnspan=2, sticky='W', pady=5, padx=5)
-        self.step_2_label = ttk.Label(self, text="Step 2: Select the COM port").grid(row=2, column=0, sticky="W", pady=5, padx=5)
-        self.step_2_cbox = ttk.Combobox(self, textvariable=serialPort, value=self.serial_ports()).grid(row=2, column=1, pady=5, padx=5)
-        self.step_3_label = ttk.Label(self, text="Step 3: Read Firmware version of GamepadBlock").grid(row=3, column=0, sticky="W", pady=5, padx=5)
-        self.step_3_button = ttk.Button(self, text="Read Version", command=self.readVersion).grid(row=3, column=1, pady=5, padx=5)
-        self.step_4_button = ttk.Button(self, text="Browse", command=self.load_file, width=10).grid(row=4,column=1, pady=5, padx=5)
-        self.step_4_label = ttk.Label(self, text="Step 4: Press the Reset button on the GamepadBlock").grid(row=4, column=0, columnspan=2, sticky="W", pady=5, padx=5)
-        self.step_5_label = ttk.Label(self, text="Step 5: Download the new firmware to the GamepadBlock").grid(row=5, column=0, sticky="W", pady=5, padx=5)
-        self.step_5_button = ttk.Button(self, text="Start Download", command=self.downloadFirmware).grid(row=5, column=1, pady=5, padx=5)
+        r = requests.get("https://github.com/petrockblog/GamepadBlockUpdater/releases/latest")
+        downloadURL = r.url
+        self.currentVersion = self.findVersionString(downloadURL)
+        self.recentFirmwareVersion['text'] = "Most recent firmware version is " + self.currentVersion
+        downloadURL = downloadURL.replace("releases/tag", "releases/download")
+        downloadURL += "/firmware.hex"
+        self.downloadFile(downloadURL, "currentFirmware.hex")
 
-    def readVersion(self):
+    def refreshSerialPorts(self):
+        self.step_3_cbox['values'] = self.serial_ports()
+
+    def findVersionString(self, url):
+        parts = url.split("tag/")
+        return parts[1]
+
+    def downloadFile(self, url, file_name):
+        # open in binary mode
+        with open(file_name, "wb") as file:
+            # get request
+            response = get(url)
+            # write to file
+            file.write(response.content)
+
+    def readVersion(self, event=None):
         ser = serial.Serial(self.serialPort.get(), 115200, timeout=1)  # open serial port
         print(ser.name)  # check which port was really used
         ser.close()
@@ -45,22 +80,13 @@ class Application(tk.Frame):
         if self.extractedVersion is not None:
             self.extractedVersion = self.extractedVersion.group(1)
             print("Found version " + self.extractedVersion)
+            self.versionLabel['text'] = "Found GamepadBlock. The firmware version of it is  " + self.extractedVersion
         else:
             print("Did not find any GamepadBlock")
-
-    def load_file(self):
-        fname = askopenfilename(filetypes=(("Template files", "*.hex"),
-                                           ("All files", "*.*")))
-        if fname:
-            try:
-                self.firmwareFile = fname
-                print("Selected firmware file " + self.firmwareFile)
-            except:  # <- naked except is a bad idea
-                showerror("Open Firmware File", "Failed to read file\n'%s'" % fname)
-            return
+            self.versionLabel['text'] = "Did not find GamepadBlock."
 
     def downloadFirmware(self):
-        call(["avrdude","-p","m32u2","-c","avr109","-P",self.serialPort.get(),"-u","-U","flash:w:"+self.firmwareFile+":a"])
+        call(["avrdude","-p","m32u2","-c","avr109","-P",self.serialPort.get(),"-u","-U","flash:w:currentFirmware.hex:a"])
 
     def serial_ports(self):
         """ Lists serial port names

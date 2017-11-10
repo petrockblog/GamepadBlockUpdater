@@ -5,9 +5,27 @@ import time
 import sys
 import glob
 import re
+import os
 from subprocess import call
 import requests
 from requests import get  # to make GET request
+import platform
+
+if 0:
+    import UserList
+    import UserString
+    import UserDict
+    import itertools
+    import collections
+    import future.backports.misc
+    import commands
+    import base64
+    import __buildin__
+    import math
+    import reprlib
+    import functools
+    import re
+    import subprocess
 
 class Application(tk.Frame):
     def __init__(self, master=None):
@@ -103,11 +121,22 @@ class Application(tk.Frame):
     def downloadFirmware(self):
         self.downloadInfo['text'] = "Started update process ..."
         self.update()
-        returnValue = call(["avrdude","-p","m32u2","-c","avr109","-P",self.serialPort.get(),"-u","-U","flash:w:currentFirmware.hex:a"])
+
+        if platform.system() == "Darwin":
+            toolFile = self.resource_path(os.path.join("tools/avrdude/mac/", "avrdude"))
+        elif platform.system() == "Windows":
+            toolFile = self.resource_path(os.path.join("tools/avrdude/windows/", "avrdude.exe"))
+            
+        returnValue = call([toolFile, "-p","m32u2","-c","avr109","-P",self.serialPort.get(),"-u","-U","flash:w:currentFirmware.hex:a"])
         if returnValue == 0:
             self.downloadInfo['text'] = "Update finished successfully."
         else:
             self.downloadInfo['text'] = "Update was not successful (error code " + str(returnValue) + ")."
+
+    def resource_path(self, relative):
+        if hasattr(sys, "_MEIPASS"):
+            return os.path.join(sys._MEIPASS, relative)
+        return os.path.join(relative)
 
     def serial_ports(self):
         """ Lists serial port names

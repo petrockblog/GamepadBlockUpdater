@@ -8,6 +8,7 @@ from subprocess import call
 import requests
 from requests import get  # to make GET request
 import platform
+import re
 
 if 0:
     import UserList
@@ -135,10 +136,12 @@ class Application(tk.Frame):
             time.sleep(2)
             if platform.system() == "Darwin":
                 toolFile = self.resource_path(os.path.join("tools/avrdude/mac/", "avrdude"))
+                configFile = self.resource_path(os.path.join("tools/avrdude/mac/", "avrdude.conf"))
             elif platform.system() == "Windows":
                 toolFile = self.resource_path(os.path.join("tools/avrdude/windows/", "avrdude.exe"))
+                configFile = self.resource_path(os.path.join("tools/avrdude/windows/", "avrdude.conf"))
 
-            returnValue = call([toolFile, "-p","m32u2","-c","avr109","-P",self.serialPort,"-u","-U","flash:w:currentFirmware.hex:a"])
+            returnValue = call([toolFile, "-p","m32u2","-c","avr109","-C",configFile,"-P",self.serialPort,"-u","-U","flash:w:currentFirmware.hex:a"])
             if returnValue == 0:
                 self.downloadInfo['text'] = "Update finished successfully."
             else:

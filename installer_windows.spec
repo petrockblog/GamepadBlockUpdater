@@ -6,8 +6,7 @@ block_cipher = None
 a = Analysis(['main.py'],
              pathex=['/Users/florian/Programming/Github/GamepadBlockUpdater'],
              binaries=[],
-             datas=[('tools/avrdude/mac/avrdude', 'tools/avrdude/mac/'),
-             		('tools/avrdude/windows/avrdude.exe', 'tools/avrdude/windows/'),
+             datas=[('tools/avrdude/windows/avrdude.exe', 'tools/avrdude/windows/'),
              		('tools/avrdude/windows/avrdude.conf', 'tools/avrdude/windows/'),
              		('tools/avrdude/windows/cygwin1.dll', 'tools/avrdude/windows/'),
              		('tools/avrdude/windows/libusb0.dll', 'tools/avrdude/windows/')

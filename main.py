@@ -141,7 +141,7 @@ class Application(tk.Frame):
         if found:
             self.downloadInfo['text'] = "Started update process ..."
             self.update()
-            time.sleep(2)
+            time.sleep(4)
             if platform.system() == "Darwin":
                 toolFile = self.resource_path(os.path.join("tools/avrdude/mac/", "avrdude"))
                 configFile = self.resource_path(os.path.join("tools/avrdude/mac/", "avrdude.conf"))

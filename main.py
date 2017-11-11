@@ -46,11 +46,13 @@ class Application(tk.Frame):
         self.versionLabel = tk.Label(self, text="", relief="sunken", justify="center")
         self.versionLabel.grid(row=5, column=0, pady=5, padx=5, columnspan=2, sticky=tk.E+tk.W)
 
-        self.step_4_label = tk.Label(self, text="Step 3: Press the Reset button on the GamepadBlock").grid(row=6, column=0, columnspan=2, sticky="W", pady=5, padx=5)
+        self.step_4_label = tk.Label(self, text="Step 3: Press the Reset button on the GamepadBlock")
+        self.step_4_label.grid(row=6, column=0, columnspan=2, sticky="W", pady=5, padx=5)
         self.step_4_button = tk.Button(self, text="Ok, I have pressed the reset button", command=self.resetPressed, state="disabled")
         self.step_4_button.grid(row=6, column=1, pady=5, padx=5, sticky=tk.E+tk.W)
 
-        self.step_5_label = tk.Label(self, text="Step 4: Download the new firmware to the GamepadBlock").grid(row=7, column=0, sticky="W", pady=5, padx=5)
+        self.step_5_label = tk.Label(self, text="Step 4: Download the new firmware to the GamepadBlock")
+        self.step_5_label.grid(row=7, column=0, sticky="W", pady=5, padx=5)
         self.step_5_button = tk.Button(self, text="Start Download", command=self.downloadFirmware, state="disabled")
         self.step_5_button.grid(row=7, column=1, pady=5, padx=5, sticky=tk.E+tk.W)
 
@@ -75,16 +77,29 @@ class Application(tk.Frame):
 
     def refreshSerialPorts(self):
         ports = list(serial.tools.list_ports.comports())
-        found = False
+        hasFound = False
         for port in ports:
-            index = port.hwid.find("16D0:0BCC")
-            if index >= 0:
+            if port.hwid.find("16D0:0BCC") >= 0:
                 self.serialPort = port.device
-                found = True
+                self.readVersion()
+                hasFound = True
+                self.step_4_button['state'] = "active"
+                self.step_5_button['state'] = "disabled"
                 break
-        if not found:
-            self.serialPort = None
-        self.readVersion()
+            if port.hwid.find("03EB:204A") >= 0:
+                self.serialPort = port.device
+                self.versionLabel['text'] = "INFO: Found GamepadBlock."
+                self.step_4_label['text'] = "You do not need to press the reset button."
+                self.step_4_button['state'] = "disabled"
+                self.step_5_label['text'] = "Step 3: Download the new firmware to the GamepadBlock"
+                self.step_5_button['state'] = "active"
+                hasFound = True
+                break
+
+        if not hasFound:
+            self.versionLabel['text'] = "INFO: Did not find GamepadBlock. Please check connection or try to reconnect."
+            self.step_4_button['state'] = "disabled"
+            self.step_5_button['state'] = "disabled"
 
     def findVersionString(self, url):
         parts = url.split("tag/")
@@ -114,13 +129,6 @@ class Application(tk.Frame):
             self.extractedVersion = self.extractedVersion.group(1)
             print("Found version " + self.extractedVersion)
             self.versionLabel['text'] = "INFO: Found GamepadBlock. The firmware version of it is  " + self.extractedVersion
-            self.step_4_button['state'] = "active"
-            self.step_5_button['state'] = "disabled"
-        else:
-            print("Did not find any GamepadBlock")
-            self.versionLabel['text'] = "INFO: Did not find GamepadBlock. Please check connection or try to reconnect."
-            self.step_4_button['state'] = "disabled"
-            self.step_5_button['state'] = "disabled"
 
     def downloadFirmware(self):
         ports = list(serial.tools.list_ports.comports())
